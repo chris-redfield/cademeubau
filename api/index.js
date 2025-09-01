@@ -1,49 +1,45 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const https = require('https');
-const path = require('path');
+const { createClient } = require('redis');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 const FILTER = false;
+const CACHE_DURATION = 5; // seconds
 
-// In-memory cache for local development
-class DataCache {
-  constructor(cacheDuration = 5) {
-    this.data = null;
-    this.timestamp = 0;
-    this.cacheDuration = cacheDuration * 1000;
-  }
-
-  isValid() {
-    return this.data !== null && (Date.now() - this.timestamp) < this.cacheDuration;
-  }
-
-  get() {
-    return this.data;
-  }
-
-  set(data) {
-    this.data = data;
-    this.timestamp = Date.now();
-  }
-}
-
-const cache = new DataCache(5);
 const ORIGINAL_URL = 'https://www.sistemas.dftrans.df.gov.br/service/gps/operacoes';
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
 
-async function getData() {
-  // For local development, use in-memory cache
-  if (cache.isValid()) {
-    console.log('Cache hit (local memory)');
-    return cache.get();
-  }
+// Initialize Redis client
+let redis;
 
+async function initRedis() {
+  if (!redis) {
+    redis = await createClient({
+      url: process.env.KV_URL || process.env.REDIS_URL
+    }).on('error', err => console.log('Redis Client Error', err))
+    .connect();
+  }
+  return redis;
+}
+
+async function getData() {
   try {
+    // Initialize Redis connection
+    const client = await initRedis();
+    
+    // Try to get cached data from Redis
+    const cachedData = await client.get('bus_data');
+    
+    if (cachedData) {
+      console.log('Cache hit from Redis KV');
+      return JSON.parse(cachedData);
+    }
+    
+    console.log('Cache miss, fetching from API');
     console.log(`Requesting on ${ORIGINAL_URL}`);
     
     const response = await fetch(ORIGINAL_URL, {
@@ -72,15 +68,25 @@ async function getData() {
       processedData = applyFilters(processedData);
     }
 
-    cache.set(processedData);
+    // Store in Redis with 5 second expiration
+    await client.setEx('bus_data', CACHE_DURATION, JSON.stringify(processedData));
     
     return processedData;
   } catch (error) {
-    console.error('Error fetching data:', error);
-    if (cache.data) {
-      console.log('Returning stale cache due to error');
-      return cache.get();
+    console.error('Error:', error);
+    
+    // Try to return stale cache if available
+    try {
+      const client = await initRedis();
+      const staleData = await client.get('bus_data');
+      if (staleData) {
+        console.log('Returning stale cache due to error');
+        return JSON.parse(staleData);
+      }
+    } catch (cacheError) {
+      console.error('Cache error:', cacheError);
     }
+    
     throw error;
   }
 }
@@ -130,11 +136,21 @@ function applyFilters(data) {
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Enable CORS
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+// Serve static files directly from public folder at root
+app.use(express.static('public'));
 
 // Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile('index.html', { root: 'public' });
 });
 
 app.get('/data', async (req, res) => {
@@ -151,7 +167,13 @@ app.get('/teste', (req, res) => {
   res.json({ success: true });
 });
 
-// Start server for local development
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
-});
+// Export for Vercel
+module.exports = app;
+
+// For local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  });
+}

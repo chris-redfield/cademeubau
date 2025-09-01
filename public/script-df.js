@@ -159,7 +159,7 @@ function initialLoad() {
 
       for(ix in baus){
         var busAngle = Math.abs(parseFloat(baus[ix].angulo))
-        var busIcon = L.icon({iconUrl: 'static/img/bus.png', iconSize: [14, 32], iconAnchor: [7, 18]})
+        var busIcon = L.icon({iconUrl: '/img/bus.png', iconSize: [14, 32], iconAnchor: [7, 18]})
 
         var marcador = L.Marker.movingMarker([[baus[ix].lat, baus[ix].long],[baus[ix].lat, baus[ix].long]],
           [1000], {autostart: true, rotationAngle: busAngle, icon: busIcon, title: baus[ix].linha});
