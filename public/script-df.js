@@ -5,7 +5,7 @@ var map = new L.Map('map').setView([-15.7836, -47.8850],12);
 var tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 layer = new L.TileLayer(tileUrl,
 {
-    attribution: 'Maps © <a href=\"www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors',
+    attribution: 'Maps © <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors',
     maxZoom: 18
 });
 
