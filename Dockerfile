@@ -1,15 +1,18 @@
-FROM nickgryg/alpine-pandas:3.6.6
+FROM node:18-alpine
 
-WORKDIR /api
+WORKDIR /app
 
-ENV FLASK_APP=proxy_api.py
-ENV FLASK_ENV=development
+# Copy package files
+COPY package*.json ./
 
-ADD requirements.txt /api
+# Install dependencies
+RUN npm install
 
-RUN pip install -r requirements.txt
+# Copy application files
+COPY . .
 
-ADD . /api
+# Expose port
+EXPOSE 5000
 
-#CMD ["flask", "run", "-h", "0.0.0.0", "-p", "${PORT}" ]
-CMD python ./proxy_api.py
+# Start the server
+CMD ["node", "server.js"]

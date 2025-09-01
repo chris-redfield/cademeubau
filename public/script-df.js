@@ -21,7 +21,7 @@ var myInit = {
 // Create a function to generate a new Request each time
 function createRequest() {
     //dev
-    return new Request('http://localhost/data', myInit);
+    return new Request('/data', myInit);
     //prod
     //return new Request('http://cademeubau.com.br/data', myInit);
 }
