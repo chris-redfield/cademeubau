@@ -17,6 +17,6 @@
     "@upstash/redis": "^1.28.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
