@@ -173,6 +173,7 @@ app.get('/teste', (req, res) => {
 // Export for Vercel
 module.exports = app;
 
+
 // For local development
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
