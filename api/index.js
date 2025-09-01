@@ -158,7 +158,10 @@ app.get('/data', async (req, res) => {
     const data = await getData();
     res.json(data);
   } catch (error) {
-    console.error('Error in /data endpoint:', error);
+    console.error('Error in /data endpoint:', error?.message || error);
+    if (error?.stack) {
+      console.error(error.stack);
+    }
     res.status(500).json({ error: 'Failed to fetch bus data' });
   }
 });
