@@ -68,9 +68,10 @@ function startUpdates(ms, marcadoresDict) {
     
     // Create a new Request for each fetch
     fetch(createRequest())
-    .then(function(response) {
+    .then(async function(response) {
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const body = await response.text().catch(()=>'');
+        throw new Error(`HTTP ${response.status} ${response.statusText} | ${body.slice(0,500)}`);
       }
       return response.json();
     })
