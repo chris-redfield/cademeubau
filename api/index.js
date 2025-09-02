@@ -161,6 +161,10 @@ app.get('/teste', (req, res) => res.json({ success: true }));
 // Export for Vercel
 module.exports = app;
 
+module.exports.config = {
+  regions: ['gru1']
+};
+
 // Local dev
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
