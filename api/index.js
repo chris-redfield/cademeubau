@@ -1,23 +1,32 @@
-// index.js
 const express = require('express');
 const { createClient } = require('redis');
-const { Agent } = require('undici'); // ✅ Undici dispatcher
+const { Agent } = require('undici');
+const dns = require('node:dns');                // ✅
+
+/* Prefer IPv4 resolution globally (Node 18+). 
+   If it throws (older Node), we ignore. */
+try { dns.setDefaultResultOrder('ipv4first'); } catch (_) {}   // ✅
 
 const app = express();
 const FILTER = false;
-const CACHE_DURATION = 10; // seconds
+const CACHE_DURATION = 10;
 
 const ORIGINAL_URL = 'https://www.sistemas.dftrans.df.gov.br/service/gps/operacoes';
 
-// ✅ Undici dispatcher
+/* ✅ Undici dispatcher with IPv4-only lookup and optional h2 disable */
 const dispatcher = new Agent({
   keepAliveTimeout: 30_000,
   keepAliveMaxTimeout: 60_000,
   connections: 128,
-  pipelining: 1
+  pipelining: 1,
+  /* Force IPv4 to avoid AAAA blackholes */
+  connect: {
+    lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4 }, cb), // ✅ IPv4
+  },
+  // If IPv4 alone doesn’t solve it, uncomment the next line to force HTTP/1.1
+  // allowH2: false,                                            // ✅ (optional)
 });
 
-// ---- helper with logging
 async function fetchJSON(url, options = {}) {
   const started = Date.now();
   try {
