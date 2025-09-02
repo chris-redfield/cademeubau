@@ -5,7 +5,7 @@ const { createClient } = require('redis');
 
 const app = express();
 const FILTER = false;
-const CACHE_DURATION = 5; // seconds
+const CACHE_DURATION = 10; // seconds
 
 const ORIGINAL_URL = 'https://www.sistemas.dftrans.df.gov.br/service/gps/operacoes';
 
