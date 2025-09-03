@@ -7,7 +7,7 @@ ENV FLASK_ENV=development
 
 ADD requirements.txt /api
 
-RUN apk install curl
+RUN apk add curl
 RUN pip install -r requirements.txt
 
 ADD . /api
