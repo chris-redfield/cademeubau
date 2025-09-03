@@ -1,4 +1,7 @@
-jinja2==3.0.3
 flask==1.0.2
+jinja2==3.0.3
+markupsafe<2.1
+werkzeug<2.0
+itsdangerous<2.1
+click<8
 pandas
-markupsafe
