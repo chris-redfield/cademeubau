@@ -1,18 +1,19 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const https = require('https');
+const cors = require('cors');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const FILTER = false;
 
-// In-memory cache for local development
+// Cache implementation - server-side cache shared by all clients
 class DataCache {
   constructor(cacheDuration = 5) {
     this.data = null;
     this.timestamp = 0;
-    this.cacheDuration = cacheDuration * 1000;
+    this.cacheDuration = cacheDuration * 1000; // Convert to milliseconds
   }
 
   isValid() {
@@ -29,23 +30,27 @@ class DataCache {
   }
 }
 
+// Create cache instance - this is shared by ALL requests
 const cache = new DataCache(5);
+
+// API URL
 const ORIGINAL_URL = 'https://www.sistemas.dftrans.df.gov.br/service/gps/operacoes';
 
+// Create an HTTPS agent that ignores SSL certificate errors (like Python's verify=False)
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
 
 async function getData() {
-  // For local development, use in-memory cache
+  // Check if cache is valid - if yes, return cached data to ALL clients
   if (cache.isValid()) {
-    console.log('Cache hit (local memory)');
     return cache.get();
   }
 
   try {
     console.log(`Requesting on ${ORIGINAL_URL}`);
     
+    // Only fetch from external API when cache is expired
     const response = await fetch(ORIGINAL_URL, {
       method: 'GET',
       agent: httpsAgent
@@ -57,8 +62,10 @@ async function getData() {
 
     const body = await response.json();
     
+    // Process the data (equivalent to pandas operations)
     let processedData = [];
     
+    // Iterate through each operator
     for (const operadora of body) {
       if (operadora.veiculos && Array.isArray(operadora.veiculos)) {
         const vehicles = operadora.veiculos.map(vehicle => processData(vehicle));
@@ -66,19 +73,23 @@ async function getData() {
       }
     }
 
+    // Filter out invalid entries (null values)
     processedData = processedData.filter(item => item !== null);
 
+    // Apply line filters if enabled
     if (FILTER) {
       processedData = applyFilters(processedData);
     }
 
+    // Update cache - this cached data will be served to ALL clients for the next 5 seconds
     cache.set(processedData);
     
     return processedData;
   } catch (error) {
     console.error('Error fetching data:', error);
+    // If there's an error and we have cached data, return it even if expired
     if (cache.data) {
-      console.log('Returning stale cache due to error');
+      console.log('Error fetching new data, returning stale cache');
       return cache.get();
     }
     throw error;
@@ -86,16 +97,19 @@ async function getData() {
 }
 
 function processData(vehicle) {
+  // Skip if no location data
   if (!vehicle.localizacao) {
     return null;
   }
 
   const { latitude, longitude } = vehicle.localizacao;
   
+  // Skip if coordinates are missing or invalid (empty strings)
   if (!latitude || !longitude || latitude === '' || longitude === '') {
     return null;
   }
 
+  // Convert to float and validate
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
   
@@ -103,12 +117,14 @@ function processData(vehicle) {
     return null;
   }
 
+  // Return processed vehicle data (matching Python structure)
   return {
     GPS_Latitude: lat,
     GPS_Longitude: lng,
     numero: vehicle.numero || '',
     linha: vehicle.linha || '',
     direcao: vehicle.direcao || 0,
+    // Include all other fields from the vehicle
     ...Object.keys(vehicle).reduce((acc, key) => {
       if (!['localizacao', 'latitude', 'longitude'].includes(key)) {
         acc[key] = vehicle[key];
@@ -129,10 +145,11 @@ function applyFilters(data) {
 }
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 
-// Serve static files directly from public folder at root
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.get('/', (req, res) => {
@@ -153,7 +170,7 @@ app.get('/teste', (req, res) => {
   res.json({ success: true });
 });
 
-// Start server for local development
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });

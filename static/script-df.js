@@ -2,10 +2,10 @@
 var map = new L.Map('map').setView([-15.7836, -47.8850],12);
 
 // create a new tile layer
-var tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+var tileUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 layer = new L.TileLayer(tileUrl,
 {
-    attribution: 'Maps © <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors',
+    attribution: 'Maps © <a href=\"www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors',
     maxZoom: 18
 });
 
@@ -21,7 +21,7 @@ var myInit = {
 // Create a function to generate a new Request each time
 function createRequest() {
     //dev
-    return new Request('/data', myInit);
+    return new Request('http://localhost/data', myInit);
     //prod
     //return new Request('http://cademeubau.com.br/data', myInit);
 }
@@ -68,10 +68,9 @@ function startUpdates(ms, marcadoresDict) {
     
     // Create a new Request for each fetch
     fetch(createRequest())
-    .then(async function(response) {
+    .then(function(response) {
       if (!response.ok) {
-        const body = await response.text().catch(()=>'');
-        throw new Error(`HTTP ${response.status} ${response.statusText} | ${body.slice(0,500)}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       return response.json();
     })
@@ -160,7 +159,7 @@ function initialLoad() {
 
       for(ix in baus){
         var busAngle = Math.abs(parseFloat(baus[ix].angulo))
-        var busIcon = L.icon({iconUrl: '/img/bus.png', iconSize: [14, 32], iconAnchor: [7, 18]})
+        var busIcon = L.icon({iconUrl: 'static/img/bus.png', iconSize: [14, 32], iconAnchor: [7, 18]})
 
         var marcador = L.Marker.movingMarker([[baus[ix].lat, baus[ix].long],[baus[ix].lat, baus[ix].long]],
           [1000], {autostart: true, rotationAngle: busAngle, icon: busIcon, title: baus[ix].linha});
