@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM nickgryg/alpine-pandas:3.6.6
 
 WORKDIR /api
 
@@ -7,6 +7,7 @@ ENV FLASK_ENV=development
 
 ADD requirements.txt /api
 
+RUN apk install curl
 RUN pip install -r requirements.txt
 
 ADD . /api
