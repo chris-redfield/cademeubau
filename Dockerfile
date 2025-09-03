@@ -1,4 +1,4 @@
-FROM nickgryg/alpine-pandas:3.6.6
+FROM python:3.11-slim
 
 WORKDIR /api
 
